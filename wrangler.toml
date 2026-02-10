@@ -1,0 +1,24 @@
+name = "chittytrack"
+main = "src/index.ts"
+compatibility_date = "2025-02-11"
+compatibility_flags = ["nodejs_compat"]
+account_id = "0bc21e3a5a9de1a4cc843be9c3e98121"
+
+[vars]
+SERVICE_NAME = "chittytrack"
+SERVICE_VERSION = "1.0.0"
+
+[[analytics_engine_datasets]]
+binding = "TRACK_ANALYTICS"
+dataset = "chittytrack_logs"
+
+[[r2_buckets]]
+binding = "TRACK_ARCHIVE"
+bucket_name = "chittytrack-logs"
+
+[[kv_namespaces]]
+binding = "TRACK_STATE"
+id = "placeholder"
+
+[env.production]
+routes = [{ pattern = "track.chitty.cc/*", zone_name = "chitty.cc" }]

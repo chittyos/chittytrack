@@ -1,0 +1,26 @@
+---
+service: chittytrack
+tier: 3
+organization: CHITTYOS
+domain: track.chitty.cc
+
+onboarding:
+  provisions:
+    - chitty_id
+    - service_token
+    - certificate
+    - trust_chain
+  auth_provider: chittyauth
+
+sync:
+  enabled: true
+  interval: 6h
+
+metadata:
+  description: Centralized observability via Cloudflare Tail Workers
+  compliance_profile: cloudflare-worker
+  tags:
+    - observability
+    - logging
+    - metrics
+    - tail-worker
