@@ -1,24 +1,37 @@
 import type { Env, GitHubWebhookPayload } from './types.js';
 
+function json(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
 export async function handleGitHubWebhook(
   request: Request,
   env: Env,
 ): Promise<Response> {
-  // Verify webhook signature if secret is configured
-  if (env.GITHUB_WEBHOOK_SECRET) {
-    const signature = request.headers.get('x-hub-signature-256');
-    if (!signature) {
-      return json({ error: 'Missing signature' }, 401);
-    }
-    const body = await request.clone().text();
-    const valid = await verifySignature(body, signature, env.GITHUB_WEBHOOK_SECRET);
-    if (!valid) {
-      return json({ error: 'Invalid signature' }, 401);
-    }
+  // Webhook signature verification is mandatory
+  if (!env.GITHUB_WEBHOOK_SECRET) {
+    return json({ error: 'Webhook not configured' }, 503);
+  }
+
+  const signature = request.headers.get('x-hub-signature-256');
+  if (!signature) {
+    return json({ error: 'Missing signature' }, 401);
+  }
+
+  const body = await request.clone().text();
+  const valid = await verifySignature(body, signature, env.GITHUB_WEBHOOK_SECRET);
+  if (!valid) {
+    return json({ error: 'Invalid signature' }, 401);
   }
 
   const eventType = request.headers.get('x-github-event') ?? 'unknown';
-  const payload: GitHubWebhookPayload = await request.json();
+
+  let payload: GitHubWebhookPayload;
+  try { payload = await request.json(); } catch { return json({ error: 'Invalid JSON body' }, 400); }
+
   const repo = payload.repository?.full_name ?? 'unknown';
 
   // Write to Analytics Engine
@@ -145,12 +158,10 @@ async function verifySignature(body: string, signature: string, secret: string):
   );
   const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
   const expected = `sha256=${Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-  return signature === expected;
-}
 
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
+  // Timing-safe comparison
+  const a = encoder.encode(signature);
+  const b = encoder.encode(expected);
+  if (a.byteLength !== b.byteLength) return false;
+  return crypto.subtle.timingSafeEqual(a, b);
 }

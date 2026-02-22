@@ -4,6 +4,7 @@ export interface Env {
   TRACK_ANALYTICS: AnalyticsEngineDataset;
   TRACK_ARCHIVE: R2Bucket;
   TRACK_STATE: KVNamespace;
+  API_TOKEN?: string;
   GITHUB_WEBHOOK_SECRET?: string;
   RESOLVE_SERVICE?: Fetcher;
 }
