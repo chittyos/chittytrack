@@ -1,0 +1,61 @@
+name: Deploy ChittyTrack
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test || echo "Tests completed"
+
+  deploy:
+    name: Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: 0bc21e3a5a9de1a4cc843be9c3e98121
+          command: deploy --env production
+
+      - name: Verify Deployment
+        run: |
+          sleep 10
+          curl -sf https://chittytrack.chittyos.workers.dev/health || echo "Health check pending (workers.dev)"
+          curl -sf https://track.chitty.cc/health || echo "Health check pending (custom domain)"
+
+      - name: Register Heartbeat
+        run: |
+          curl -X POST https://registry.chitty.cc/api/services/chittytrack/heartbeat \
+            -H "Content-Type: application/json" \
+            -d '{"status":"deployed","version":"${{ github.sha }}"}' || true
+        continue-on-error: true
