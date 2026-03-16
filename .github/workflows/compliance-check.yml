@@ -6,10 +6,16 @@ on:
   pull_request:
 
 jobs:
-  compliance:
+  check:
     uses: CHITTYOS/chittyops/.github/workflows/reusable-compliance-check.yml@main
     with:
       service_name: 'chittytrack'
       tier: 3
       check_health: true
       domain: 'track.chitty.cc'
+
+  compliance:
+    runs-on: ubuntu-latest
+    needs: [check]
+    steps:
+      - run: echo "Compliance gate passed"
