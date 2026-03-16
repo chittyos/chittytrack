@@ -1,20 +1,26 @@
 name = "chittytrack"
 main = "src/index.ts"
-compatibility_date = "2026-02-01"
+compatibility_date = "2026-03-16"
 compatibility_flags = ["nodejs_compat"]
 account_id = "0bc21e3a5a9de1a4cc843be9c3e98121"
-workers_dev = true
+workers_dev = false
+
+routes = [{ pattern = "track.chitty.cc/*", zone_name = "chitty.cc" }]
 
 [vars]
 SERVICE_NAME = "chittytrack"
 SERVICE_VERSION = "1.0.0"
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
 
 [placement]
 mode = "smart"
 
 [observability]
 enabled = true
+
+# Secrets (set via: wrangler secret put <NAME>)
+# - API_TOKEN (Bearer token for API authentication)
+# - GITHUB_WEBHOOK_SECRET (GitHub org webhook HMAC secret)
 
 [[analytics_engine_datasets]]
 binding = "TRACK_ANALYTICS"
@@ -25,30 +31,5 @@ binding = "TRACK_ARCHIVE"
 bucket_name = "chittytrack-logs"
 
 [[kv_namespaces]]
-binding = "TRACK_STATE"
-id = "000d47faf9654f33bcb748e72bdcaa34"
-
-# Secrets (set via: wrangler secret put <NAME>)
-# - API_TOKEN (Bearer token for API authentication)
-# - GITHUB_WEBHOOK_SECRET (GitHub org webhook HMAC secret)
-
-[env.production]
-name = "chittytrack"
-workers_dev = true
-routes = [{ pattern = "track.chitty.cc/*", zone_name = "chitty.cc" }]
-[env.production.vars]
-ENVIRONMENT = "production"
-SERVICE_NAME = "chittytrack"
-SERVICE_VERSION = "1.0.0"
-
-[[env.production.analytics_engine_datasets]]
-binding = "TRACK_ANALYTICS"
-dataset = "chittytrack_logs"
-
-[[env.production.r2_buckets]]
-binding = "TRACK_ARCHIVE"
-bucket_name = "chittytrack-logs"
-
-[[env.production.kv_namespaces]]
 binding = "TRACK_STATE"
 id = "000d47faf9654f33bcb748e72bdcaa34"
