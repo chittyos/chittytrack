@@ -1,3 +1,6 @@
+![ChittyOS](https://img.shields.io/badge/ChittyOS-service-6366F1?style=flat-square)
+![Tier](https://img.shields.io/badge/tier-3%20operational-3730A3?style=flat-square)
+
 # ChittyTrack
 
 Centralized observability for ChittyOS. Receives logs from all Cloudflare Workers via Tail Workers and GitHub events via webhooks.
