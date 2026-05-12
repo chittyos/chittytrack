@@ -2,6 +2,7 @@ import type { Env, TraceEvent } from './types.js';
 import { handleTail } from './tail-handler.js';
 import { handleGitHubWebhook } from './github-handler.js';
 import { handleApi } from './api.js';
+import { handleOtlpTraces, handleOtlpLogs } from './otel-handler.js';
 
 const CORS_ORIGIN = 'https://dashboard.chitty.cc';
 
@@ -73,6 +74,16 @@ export default {
       // GitHub webhook (authenticated via HMAC signature)
       if (path === '/api/v1/github' && request.method === 'POST') {
         return handleGitHubWebhook(request, env);
+      }
+
+      // OTLP HTTP receivers (called by Cloudflare Workers native observability export).
+      // Auth: open. Telemetry is low-sensitivity; CF native rate limiting handles abuse.
+      // To lock down later, add OTEL_INGEST_TOKEN secret + Authorization check here.
+      if (path === '/v1/traces') {
+        return handleOtlpTraces(request, env);
+      }
+      if (path === '/v1/logs') {
+        return handleOtlpLogs(request, env);
       }
 
       // API endpoints (authenticated via Bearer token)
