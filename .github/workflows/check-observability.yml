@@ -79,13 +79,13 @@ jobs:
               logs = obs.get("logs", {}) or {}
               if not logs.get("enabled"):
                   FAILURES.append(f"{name}: observability.logs.enabled is not true")
-              if "chittytrack" not in (logs.get("destinations") or []):
-                  FAILURES.append(f"{name}: observability.logs.destinations must include 'chittytrack'")
+              if "chittytrack-logs" not in (logs.get("destinations") or []):
+                  FAILURES.append(f"{name}: observability.logs.destinations must include 'chittytrack-logs'")
               traces = obs.get("traces", {}) or {}
               if not traces.get("enabled"):
                   FAILURES.append(f"{name}: observability.traces.enabled is not true (block missing or disabled)")
-              if "chittytrack" not in (traces.get("destinations") or []):
-                  FAILURES.append(f"{name}: observability.traces.destinations must include 'chittytrack'")
+              if "chittytrack-traces" not in (traces.get("destinations") or []):
+                  FAILURES.append(f"{name}: observability.traces.destinations must include 'chittytrack-traces'")
               if traces.get("persist") is True:
                   FAILURES.append(f"{name}: observability.traces.persist=true wastes storage; set to false (telemetry forwarded to chittytrack instead)")
               # tail_consumers is belt-and-suspenders, warn if missing but don't fail
