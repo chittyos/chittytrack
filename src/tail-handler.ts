@@ -1,4 +1,5 @@
 import type { Env, TraceEvent, ErrorEntry } from './types.js';
+import { recordLastSeen, bumpCounter } from './kv-coalesce.js';
 
 export async function handleTail(events: TraceEvent[], env: Env): Promise<void> {
   for (const event of events) {
@@ -19,16 +20,11 @@ export async function handleTail(events: TraceEvent[], env: Env): Promise<void> 
       indexes: [event.scriptName],
     });
 
-    // Track last-seen per worker in KV
-    await env.TRACK_STATE.put(
-      `worker:${event.scriptName}:lastSeen`,
-      String(event.eventTimestamp),
-    );
-
-    // Increment event counter
-    const countKey = `worker:${event.scriptName}:count`;
-    const current = parseInt((await env.TRACK_STATE.get(countKey)) ?? '0', 10);
-    await env.TRACK_STATE.put(countKey, String(current + 1));
+    // Coalesced last-seen + event counter (see kv-coalesce.ts): was 2 KV ops
+    // per event, now at most once/60s/worker. Analytics Engine above holds the
+    // exact per-event data.
+    await recordLastSeen(env, event.scriptName, event.eventTimestamp);
+    await bumpCounter(env, `worker:${event.scriptName}:count`);
 
     // If errors or exceptions, write full detail to R2 (cold storage)
     if (event.outcome !== 'ok' || event.exceptions.length > 0) {
@@ -46,10 +42,8 @@ export async function handleTail(events: TraceEvent[], env: Env): Promise<void> 
       const key = `errors/${date}/${event.scriptName}/${event.eventTimestamp}.json`;
       await env.TRACK_ARCHIVE.put(key, JSON.stringify(errorEntry));
 
-      // Increment error counter
-      const errKey = `worker:${event.scriptName}:errors`;
-      const errCount = parseInt((await env.TRACK_STATE.get(errKey)) ?? '0', 10);
-      await env.TRACK_STATE.put(errKey, String(errCount + 1));
+      // Coalesced error counter (see kv-coalesce.ts)
+      await bumpCounter(env, `worker:${event.scriptName}:errors`);
 
       // Forward to chittyagent-resolve if bound
       if (env.RESOLVE_SERVICE) {
@@ -63,6 +57,20 @@ export async function handleTail(events: TraceEvent[], env: Env): Promise<void> 
           // Don't let resolve failures break tail processing
         }
       }
+
+      // Forward to mini evaluator swarm (Alchemist) if bound
+      if (env.ALCHEMIST_SERVICE) {
+        try {
+          await env.ALCHEMIST_SERVICE.fetch('https://alchemist/api/v1/evaluate', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(errorEntry),
+          });
+        } catch {
+          // Don't let evaluator failures break tail processing
+        }
+      }
+
     }
   }
 }

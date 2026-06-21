@@ -12,6 +12,7 @@
  */
 
 import type { Env } from "./types.js";
+import { recordLastSeen, bumpCounter } from "./kv-coalesce.js";
 
 type AnyValue = { stringValue?: string; intValue?: string | number; boolValue?: boolean; doubleValue?: number; arrayValue?: { values: AnyValue[] } };
 type KeyValue = { key: string; value: AnyValue };
@@ -140,11 +141,9 @@ export async function handleOtlpTraces(request: Request, env: Env): Promise<Resp
     console.error("R2 archive write failed", e);
   }
 
-  // Update per-service KV counters
+  // Coalesced per-service last-seen (see kv-coalesce.ts)
   for (const svc of services) {
-    await Promise.allSettled([
-      env.TRACK_STATE.put(`worker:${svc}:lastSeen`, String(Date.now())),
-    ]);
+    await recordLastSeen(env, svc, Date.now());
   }
 
   return new Response(JSON.stringify({ partialSuccess: {} }), { status: 200, headers: { "content-type": "application/json", ...CORS } });
@@ -208,8 +207,8 @@ export async function handleOtlpLogs(request: Request, env: Env): Promise<Respon
 
   for (const svc of services) {
     await Promise.allSettled([
-      env.TRACK_STATE.put(`worker:${svc}:lastSeen`, String(Date.now())),
-      errorCount > 0 ? incrementKV(env, `worker:${svc}:errors`, errorCount) : Promise.resolve(),
+      recordLastSeen(env, svc, Date.now()),
+      errorCount > 0 ? bumpCounter(env, `worker:${svc}:errors`, errorCount) : Promise.resolve(),
     ]);
   }
 
@@ -220,7 +219,3 @@ function ss(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "...(truncated)" : s;
 }
 
-async function incrementKV(env: Env, key: string, by: number): Promise<void> {
-  const cur = parseInt((await env.TRACK_STATE.get(key)) ?? "0", 10);
-  await env.TRACK_STATE.put(key, String(cur + by));
-}

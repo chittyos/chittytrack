@@ -5,8 +5,10 @@ export interface Env {
   TRACK_ARCHIVE: R2Bucket;
   TRACK_STATE: KVNamespace;
   API_TOKEN?: string;
+  TRACK_KV_MAX_WRITES_PER_MIN?: string;
   GITHUB_WEBHOOK_SECRET?: string;
   RESOLVE_SERVICE?: Fetcher;
+  ALCHEMIST_SERVICE?: Fetcher;
 }
 
 export interface TraceLog {

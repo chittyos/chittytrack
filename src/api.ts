@@ -1,4 +1,5 @@
 import type { Env, WorkerStats } from './types.js';
+import { setKvWrites, kvWritesEnabled } from './kv-coalesce.js';
 
 export async function handleApi(
   path: string,
@@ -17,8 +18,25 @@ export async function handleApi(
   if (path === '/api/v1/query') {
     return handleQuery(request, env);
   }
+  // Operator kill switch for TRACK_STATE writes (cut-until-confirmation guardrail).
+  if (path === '/api/v1/admin/kv-writes/on' || path === '/api/v1/admin/kv-writes/off') {
+    if (!isAuthed(request, env)) return json({ error: 'unauthorized' }, 401);
+    const on = path.endsWith('/on');
+    await setKvWrites(env, on);
+    return json({ kv_writes_enabled: on });
+  }
+  if (path === '/api/v1/admin/kv-writes') {
+    return json({ kv_writes_enabled: await kvWritesEnabled(env) });
+  }
 
   return json({ error: 'Not found' }, 404);
+}
+
+/** Bearer-token auth for mutating admin routes. Fail-closed: deny if API_TOKEN is unset. */
+function isAuthed(request: Request, env: Env): boolean {
+  if (!env.API_TOKEN) return false;
+  const auth = request.headers.get('authorization') ?? '';
+  return auth === `Bearer ${env.API_TOKEN}`;
 }
 
 async function getWorkers(env: Env): Promise<Response> {
