@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "cf deploy",
-    "deploy:production": "cf deploy -m production",
+    "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy -m production",
     "tail": "wrangler tail"
   },
   "devDependencies": {
