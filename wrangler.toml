@@ -33,3 +33,7 @@ bucket_name = "chittytrack-logs"
 [[kv_namespaces]]
 binding = "TRACK_STATE"
 id = "000d47faf9654f33bcb748e72bdcaa34"
+
+[[services]]
+binding = "ALCHEMIST_SERVICE"
+service = "chittyagent-alchemist"
